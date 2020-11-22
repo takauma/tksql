@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	"github.com/go-gorp/gorp"
+	"github.com/takauma/logging"
 )
 
 // SQLSession SQLセッション構造体.
@@ -15,11 +16,12 @@ type SQLSession struct {
 	dbMap        *gorp.DbMap
 	mapperConfig *MapperConfig
 	mappers      map[string]*mapper
+	logger       *logging.Logger
 	query        string
 }
 
 // NewSQLSession SQLセッション構造体を生成します.
-func NewSQLSession(dBConfig *DBConfig, mapperConfig *MapperConfig) (*SQLSession, error) {
+func NewSQLSession(dBConfig *DBConfig, mapperConfig *MapperConfig, logger *logging.Logger) (*SQLSession, error) {
 	//DBとのコネクションを取得.
 	dbMap, err := conn(dBConfig)
 
@@ -46,6 +48,7 @@ func NewSQLSession(dBConfig *DBConfig, mapperConfig *MapperConfig) (*SQLSession,
 		dbMap:        dbMap,
 		mapperConfig: mapperConfig,
 		mappers:      mappers,
+		logger:       logger,
 	}, nil
 }
 
@@ -72,12 +75,20 @@ func (session *SQLSession) SelectOne(parameter, result interface{}, mapper, id s
 
 	//構造体の全フィールドをマップに変換.
 	paramMap := convFieldToMap(parameter)
+	session.logger.Debug("動的SQLパラメータ:", paramMap)
+
 	//SQLテンプレートを解析.
-	session.parseSQL(&sql, paramMap)
+	session.parseSQL(sql, paramMap)
+	session.logger.Debug("実行SQL文:", session.query)
+
 	//SQLを取得.
+	session.logger.Debug("実行前結果オブジェクト:", result)
 	session.dbMap.SelectOne(result, session.query)
+	session.logger.Debug("実行後結果オブジェクト:", result)
+
 	//クエリを初期化.
 	session.clearQuery()
+	session.logger.Debug("初期化後SQL文格納フィールド:", session.query)
 
 	return nil
 }
@@ -105,12 +116,20 @@ func (session *SQLSession) SelectList(parameter, resultList interface{}, mapper,
 
 	//構造体の全フィールドをマップに変換.
 	paramMap := convFieldToMap(parameter)
+	session.logger.Debug("動的SQLパラメータ:", paramMap)
+
 	//SQLテンプレートを解析.
-	session.parseSQL(&sql, paramMap)
+	session.parseSQL(sql, paramMap)
+	session.logger.Debug("実行SQL文:", session.query)
+
 	//SQLを取得.
+	session.logger.Debug("実行前結果リスト:", fmt.Sprintf("%v", resultList))
 	session.dbMap.Select(resultList, session.query)
+	session.logger.Debug("実行後結果リスト:", fmt.Sprintf("%v", resultList))
+
 	//クエリを初期化.
 	session.clearQuery()
+	session.logger.Debug("初期化後SQL文格納フィールド:", session.query)
 
 	return nil
 }
@@ -138,8 +157,11 @@ func (session *SQLSession) Insert(parameter interface{}, mapper, id string) (int
 
 	//構造体の全フィールドをマップに変換.
 	paramMap := convFieldToMap(parameter)
+	session.logger.Debug("動的SQLパラメータ:", paramMap)
+
 	//SQLテンプレートを解析.
-	session.parseSQL(&sql, paramMap)
+	session.parseSQL(sql, paramMap)
+	session.logger.Debug("実行SQL文:", session.query)
 
 	//SQLを実行.
 	result, err := session.dbMap.Db.Exec(session.query)
@@ -149,8 +171,11 @@ func (session *SQLSession) Insert(parameter interface{}, mapper, id string) (int
 
 	//レコード登録数を取得.
 	num, err := result.RowsAffected()
+	session.logger.Debug("レコード登録数:", num)
+
 	//クエリを初期化.
 	session.clearQuery()
+	session.logger.Debug("初期化後SQL文格納フィールド:", session.query)
 
 	return int(num), err
 }
@@ -178,8 +203,11 @@ func (session *SQLSession) Update(parameter interface{}, mapper, id string) (int
 
 	//構造体の全フィールドをマップに変換.
 	paramMap := convFieldToMap(parameter)
+	session.logger.Debug("動的SQLパラメータ:", paramMap)
+
 	//SQLテンプレートを解析.
-	session.parseSQL(&sql, paramMap)
+	session.parseSQL(sql, paramMap)
+	session.logger.Debug("実行SQL文:", session.query)
 
 	//SQLを実行.
 	result, err := session.dbMap.Db.Exec(session.query)
@@ -189,8 +217,11 @@ func (session *SQLSession) Update(parameter interface{}, mapper, id string) (int
 
 	//レコード更新数を取得.
 	num, err := result.RowsAffected()
+	session.logger.Debug("レコード更新数:", num)
+
 	//クエリを初期化.
 	session.clearQuery()
+	session.logger.Debug("初期化後SQL文格納フィールド:", session.query)
 
 	return int(num), err
 }
@@ -218,8 +249,11 @@ func (session *SQLSession) Delete(parameter interface{}, mapper, id string) (int
 
 	//構造体の全フィールドをマップに変換.
 	paramMap := convFieldToMap(parameter)
+	session.logger.Debug("動的SQLパラメータ:", paramMap)
+
 	//SQLテンプレートを解析.
-	session.parseSQL(&sql, paramMap)
+	session.parseSQL(sql, paramMap)
+	session.logger.Debug("実行SQL文:", session.query)
 
 	//SQLを実行.
 	result, err := session.dbMap.Db.Exec(session.query)
@@ -229,19 +263,22 @@ func (session *SQLSession) Delete(parameter interface{}, mapper, id string) (int
 
 	//レコード削除数を取得.
 	num, err := result.RowsAffected()
+	session.logger.Debug("レコード削除数:", num)
+
 	//クエリを初期化.
 	session.clearQuery()
+	session.logger.Debug("初期化後SQL文格納フィールド:", session.query)
 
 	return int(num), err
 }
 
 // parseSQL SQL文を解析します.
-func (session *SQLSession) parseSQL(sql *string, paramMap map[string]string) {
+func (session *SQLSession) parseSQL(sql string, paramMap map[string]string) {
 	if len(paramMap) == 0 {
 		return
 	}
 
-	templ := template.Must(template.New("sql").Parse(*sql))
+	templ := template.Must(template.New("sql").Parse(sql))
 	templ.Execute(session, paramMap)
 }
 
@@ -277,10 +314,12 @@ func convFieldToMap(obj interface{}) map[string]string {
 		fieldName := t.Field(i).Name
 		fieldValue := v.FieldByName(fieldName).Interface()
 
-		//値が空でない場合.
-		if fieldValue != "" {
+		if fieldValue == "NULL" {
+			fieldMap[fieldName] = fmt.Sprintf("%v", fieldValue)
+		} else {
 			fieldMap[fieldName] = fmt.Sprintf("'%v'", fieldValue)
 		}
+
 	}
 
 	return fieldMap

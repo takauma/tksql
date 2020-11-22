@@ -3,6 +3,7 @@ package tksql
 import (
 	"encoding/xml"
 	"io/ioutil"
+	"path"
 )
 
 // Mapper Mapper構造体.
@@ -21,9 +22,9 @@ type query struct {
 }
 
 // parseMapper XMLファイルを解析しマッパー構造体に格納します.
-func parseMapper(path, filename string) (*mapper, error) {
+func parseMapper(mapperDir, filename string) (*mapper, error) {
 	// XMLファイルの内容を読み込む.
-	data, err := ioutil.ReadFile(path + filename)
+	data, err := ioutil.ReadFile(path.Join(mapperDir, filename))
 
 	if err != nil {
 		return nil, err
