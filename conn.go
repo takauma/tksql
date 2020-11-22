@@ -1,4 +1,4 @@
-package main
+package tksql
 
 import (
 	"database/sql"

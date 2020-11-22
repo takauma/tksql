@@ -1,4 +1,4 @@
-package main
+package tksql
 
 // Driver Driver型.
 type Driver int

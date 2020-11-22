@@ -1,4 +1,4 @@
-package main
+package tksql
 
 // MapperNames マッパー名リスト.
 type MapperNames []string

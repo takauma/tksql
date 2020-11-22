@@ -1,4 +1,4 @@
-package main
+package tksql
 
 import (
 	"encoding/xml"
@@ -7,40 +7,17 @@ import (
 
 // Mapper Mapper構造体.
 type mapper struct {
-	Name   string    `xml:"name,attr"`
-	Select []sSelect `xml:"select"`
-	Insert []sInsert `xml:"insert"`
-	Update []sUpdate `xml:"update"`
-	Delete []sDelete `xml:"delete"`
+	Name   string  `xml:"name,attr"`
+	Select []query `xml:"select"`
+	Insert []query `xml:"insert"`
+	Update []query `xml:"update"`
+	Delete []query `xml:"delete"`
 }
 
 // sSelect Select構造体.
-type sSelect struct {
-	ID            string `xml:"id,attr"`
-	ParameterType string `xml:"parameterType,attr"`
-	ResultType    string `xml:"resultType,attr"`
-	Value         string `xml:",cdata"`
-}
-
-// sInsert Insert構造体.
-type sInsert struct {
-	ID            string `xml:"id,attr"`
-	ParameterType string `xml:"parameterType,attr"`
-	Value         string `xml:",cdata"`
-}
-
-// sUpdate Update構造体.
-type sUpdate struct {
-	ID            string `xml:"id,attr"`
-	ParameterType string `xml:"parameterType,attr"`
-	Value         string `xml:",cdata"`
-}
-
-// sDelete Delete構造体.
-type sDelete struct {
-	ID            string `xml:"id,attr"`
-	ParameterType string `xml:"parameterType,attr"`
-	Value         string `xml:",cdata"`
+type query struct {
+	ID    string `xml:"id,attr"`
+	Value string `xml:",cdata"`
 }
 
 // parseMapper XMLファイルを解析しマッパー構造体に格納します.

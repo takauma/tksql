@@ -1,4 +1,4 @@
-package main
+package tksql
 
 import (
 	"errors"
@@ -27,6 +27,7 @@ func NewSQLSession(dBConfig *DBConfig, mapperConfig *MapperConfig) (*SQLSession,
 		return nil, err
 	}
 
+	//マッパーMap.
 	mappers := map[string]*mapper{}
 
 	//指定されたすべてのXMLファイルをマッパー構造体に変換しリストに格納.
@@ -40,6 +41,7 @@ func NewSQLSession(dBConfig *DBConfig, mapperConfig *MapperConfig) (*SQLSession,
 		mappers[mapper.Name] = mapper
 	}
 
+	//SQLSessionを返す.
 	return &SQLSession{
 		dbMap:        dbMap,
 		mapperConfig: mapperConfig,
@@ -49,9 +51,6 @@ func NewSQLSession(dBConfig *DBConfig, mapperConfig *MapperConfig) (*SQLSession,
 
 // SelectOne 抽出条件に一致する1レコードを取得します.
 func (session *SQLSession) SelectOne(parameter, result interface{}, mapper, id string) error {
-	//構造体の全フィールドをマップに変換.
-	paramMap := convFieldToMap(parameter)
-
 	//SQL文.
 	sql := ""
 
@@ -71,6 +70,8 @@ func (session *SQLSession) SelectOne(parameter, result interface{}, mapper, id s
 		return errors.New("指定されたSQL文が存在しません。")
 	}
 
+	//構造体の全フィールドをマップに変換.
+	paramMap := convFieldToMap(parameter)
 	//SQLテンプレートを解析.
 	session.parseSQL(&sql, paramMap)
 	//SQLを取得.
@@ -83,9 +84,6 @@ func (session *SQLSession) SelectOne(parameter, result interface{}, mapper, id s
 
 // SelectList 抽出条件に一致する複数レコードを取得します.
 func (session *SQLSession) SelectList(parameter, resultList interface{}, mapper, id string) error {
-	//構造体の全フィールドをマップに変換.
-	paramMap := convFieldToMap(parameter)
-
 	//SQL文.
 	sql := ""
 
@@ -105,6 +103,8 @@ func (session *SQLSession) SelectList(parameter, resultList interface{}, mapper,
 		return errors.New("指定されたSQL文が存在しません。")
 	}
 
+	//構造体の全フィールドをマップに変換.
+	paramMap := convFieldToMap(parameter)
 	//SQLテンプレートを解析.
 	session.parseSQL(&sql, paramMap)
 	//SQLを取得.
@@ -113,6 +113,126 @@ func (session *SQLSession) SelectList(parameter, resultList interface{}, mapper,
 	session.clearQuery()
 
 	return nil
+}
+
+// Insert レコードの挿入を行います.
+func (session *SQLSession) Insert(parameter interface{}, mapper, id string) (int, error) {
+	//SQL文.
+	sql := ""
+
+	//指定のSQL文を取得.
+	if m, ok := session.mappers[mapper]; ok {
+		if mapper == m.Name {
+			for _, s := range m.Insert {
+				if id == s.ID {
+					sql = s.Value
+					break
+				}
+			}
+		}
+	}
+
+	if sql == "" {
+		return 0, errors.New("指定されたSQL文が存在しません。")
+	}
+
+	//構造体の全フィールドをマップに変換.
+	paramMap := convFieldToMap(parameter)
+	//SQLテンプレートを解析.
+	session.parseSQL(&sql, paramMap)
+
+	//SQLを実行.
+	result, err := session.dbMap.Db.Exec(session.query)
+	if err != nil {
+		return 0, err
+	}
+
+	//レコード登録数を取得.
+	num, err := result.RowsAffected()
+	//クエリを初期化.
+	session.clearQuery()
+
+	return int(num), err
+}
+
+// Update レコードの更新を行います.
+func (session *SQLSession) Update(parameter interface{}, mapper, id string) (int, error) {
+	//SQL文.
+	sql := ""
+
+	//指定のSQL文を取得.
+	if m, ok := session.mappers[mapper]; ok {
+		if mapper == m.Name {
+			for _, s := range m.Update {
+				if id == s.ID {
+					sql = s.Value
+					break
+				}
+			}
+		}
+	}
+
+	if sql == "" {
+		return 0, errors.New("指定されたSQL文が存在しません。")
+	}
+
+	//構造体の全フィールドをマップに変換.
+	paramMap := convFieldToMap(parameter)
+	//SQLテンプレートを解析.
+	session.parseSQL(&sql, paramMap)
+
+	//SQLを実行.
+	result, err := session.dbMap.Db.Exec(session.query)
+	if err != nil {
+		return 0, err
+	}
+
+	//レコード更新数を取得.
+	num, err := result.RowsAffected()
+	//クエリを初期化.
+	session.clearQuery()
+
+	return int(num), err
+}
+
+// Delete レコードの削除を行います.
+func (session *SQLSession) Delete(parameter interface{}, mapper, id string) (int, error) {
+	//SQL文.
+	sql := ""
+
+	//指定のSQL文を取得.
+	if m, ok := session.mappers[mapper]; ok {
+		if mapper == m.Name {
+			for _, s := range m.Delete {
+				if id == s.ID {
+					sql = s.Value
+					break
+				}
+			}
+		}
+	}
+
+	if sql == "" {
+		return 0, errors.New("指定されたSQL文が存在しません。")
+	}
+
+	//構造体の全フィールドをマップに変換.
+	paramMap := convFieldToMap(parameter)
+	//SQLテンプレートを解析.
+	session.parseSQL(&sql, paramMap)
+
+	//SQLを実行.
+	result, err := session.dbMap.Db.Exec(session.query)
+	if err != nil {
+		return 0, err
+	}
+
+	//レコード削除数を取得.
+	num, err := result.RowsAffected()
+	//クエリを初期化.
+	session.clearQuery()
+
+	return int(num), err
 }
 
 // parseSQL SQL文を解析します.
