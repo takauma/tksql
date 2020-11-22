@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 	"text/template"
 
 	"github.com/go-gorp/gorp"
@@ -82,9 +81,9 @@ func (session *SQLSession) SelectOne(parameter, result interface{}, mapper, id s
 	session.logger.Debug("実行SQL文:", session.query)
 
 	//SQLを取得.
-	session.logger.Debug("実行前結果オブジェクト:", result)
+	session.logger.Debug("実行前結果オブジェクト:", fmt.Sprintf("%v", result))
 	session.dbMap.SelectOne(result, session.query)
-	session.logger.Debug("実行後結果オブジェクト:", result)
+	session.logger.Debug("実行後結果オブジェクト:", fmt.Sprintf("%v", result))
 
 	//クエリを初期化.
 	session.clearQuery()
@@ -284,7 +283,7 @@ func (session *SQLSession) parseSQL(sql string, paramMap map[string]string) {
 
 // Write queryフィールドに書き込みを行います.
 func (session *SQLSession) Write(p []byte) (n int, err error) {
-	session.query += strings.Trim(string(p), " ")
+	session.query += string(p)
 	n = len(p)
 
 	return n, nil
