@@ -1,5 +1,9 @@
 package tksql
 
+// TODO
+// 現状はmysqlのみの対応.
+// 後々他のDBも対応予定.
+
 // Driver Driver型.
 type Driver int
 

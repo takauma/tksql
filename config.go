@@ -25,6 +25,18 @@ type DBConfig struct {
 	url      string
 	port     string
 	database string
+	engine   string
+	encoding string
+}
+
+// SetEngine エンジンを設定します.
+func (c *DBConfig) SetEngine(engine string) {
+	c.engine = engine
+}
+
+// エンコーディングを設定します.
+func (c *DBConfig) SetEnCoding(encoding string) {
+	c.encoding = encoding
 }
 
 // NewDBConfig DB設定構造体を生成します.

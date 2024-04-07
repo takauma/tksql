@@ -1,17 +1,18 @@
 module github.com/takauma/tksql
 
-go 1.18
+go 1.22.2
 
 require (
 	github.com/go-gorp/gorp v2.2.0+incompatible
-	github.com/go-sql-driver/mysql v1.6.0
-	github.com/takauma/logging v0.0.0-20210517145913-6f7d1e5da1df
+	github.com/go-sql-driver/mysql v1.8.1
+	github.com/takauma/logging v0.0.0-20240403181030-91d43ff76a0e
 )
 
 require (
-	github.com/lib/pq v1.10.4 // indirect
-	github.com/mattn/go-sqlite3 v1.14.12 // indirect
-	github.com/poy/onpar v1.1.2 // indirect
-	github.com/stretchr/testify v1.7.1 // indirect
+	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/lib/pq v1.10.9 // indirect
+	github.com/mattn/go-sqlite3 v1.14.22 // indirect
+	github.com/poy/onpar v0.3.2 // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/ziutek/mymysql v1.5.4 // indirect
 )

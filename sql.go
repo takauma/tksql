@@ -20,10 +20,6 @@ type SQLSession struct {
 	query        string
 }
 
-func (session *SQLSession) DbMap() *gorp.DbMap {
-	return session.dbMap
-}
-
 // NewSQLSession SQLセッション構造体を生成します.
 func NewSQLSession(dBConfig *DBConfig, mapperConfig *MapperConfig, logger *logging.Logger) (*SQLSession, error) {
 	//DBとのコネクションを取得.
@@ -262,6 +258,21 @@ func (session *SQLSession) Delete(parameter interface{}, mapper string, id strin
 	return int(num), err
 }
 
+// GetDbMap DbMapを取得します.
+func (session *SQLSession) GetDbMap() *gorp.DbMap {
+	return session.dbMap
+}
+
+// Write queryフィールドに書き込みを行います.
+// io.Writerインターフェースの実装メソッド.
+// テンプレートのマッピング実行(parseSQL)で利用.
+func (session *SQLSession) Write(p []byte) (n int, err error) {
+	session.query += string(p)
+	n = len(p)
+
+	return n, nil
+}
+
 // parseSQL SQL文を解析します.
 func (session *SQLSession) parseSQL(sql string, paramMap map[string]string) {
 	// paramMapが未設定(nil or 要素0件)の場合は空のMapで初期化.
@@ -271,14 +282,6 @@ func (session *SQLSession) parseSQL(sql string, paramMap map[string]string) {
 
 	templ := template.Must(template.New("sql").Parse(sql))
 	templ.Execute(session, paramMap)
-}
-
-// Write queryフィールドに書き込みを行います.
-func (session *SQLSession) Write(p []byte) (n int, err error) {
-	session.query += string(p)
-	n = len(p)
-
-	return n, nil
 }
 
 // clearQuery クエリフィールドを初期化します.

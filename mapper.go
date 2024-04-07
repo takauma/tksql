@@ -2,11 +2,12 @@ package tksql
 
 import (
 	"encoding/xml"
-	"io/ioutil"
+	"io"
+	"os"
 	"path"
 )
 
-// Mapper Mapper構造体.
+// mapper マッパー構造体.
 type mapper struct {
 	Name   string  `xml:"name,attr"`
 	Select []query `xml:"select"`
@@ -15,7 +16,7 @@ type mapper struct {
 	Delete []query `xml:"delete"`
 }
 
-// sSelect Select構造体.
+// query クエリ構造体.
 type query struct {
 	ID    string `xml:"id,attr"`
 	Value string `xml:",cdata"`
@@ -24,8 +25,13 @@ type query struct {
 // parseMapper XMLファイルを解析しマッパー構造体に格納します.
 func parseMapper(mapperDir, filename string) (*mapper, error) {
 	// XMLファイルの内容を読み込む.
-	data, err := ioutil.ReadFile(path.Join(mapperDir, filename))
+	file, err := os.Open(path.Join(mapperDir, filename))
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
 
+	data, err := io.ReadAll(file)
 	if err != nil {
 		return nil, err
 	}
