@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"text/template"
+	"time"
 
 	"github.com/go-gorp/gorp"
 	"github.com/takauma/logging"
@@ -56,7 +57,7 @@ func NewSQLSession(dBConfig *DBConfig, mapperConfig *MapperConfig, logger *loggi
 }
 
 // SelectOne 抽出条件に一致する1レコードを取得します.
-func (session *SQLSession) SelectOne(parameter, result interface{}, mapper, id string) error {
+func (session *SQLSession) SelectOne(parameter interface{}, result interface{}, mapper, id string) error {
 	//SQL文.
 	sql := ""
 
@@ -78,26 +79,29 @@ func (session *SQLSession) SelectOne(parameter, result interface{}, mapper, id s
 
 	//構造体の全フィールドをマップに変換.
 	paramMap := convFieldToMap(parameter)
-	//session.logger.Debug("動的SQLパラメータ:", paramMap)
 
 	//SQLテンプレートを解析.
 	session.parseSQL(sql, paramMap)
-	//session.logger.Debug("実行SQL文:", session.query)
 
 	//SQLを取得.
-	//session.logger.Debug("実行前結果オブジェクト:", fmt.Sprintf("%v", result))
+	if _, ok := result.(int); ok {
+		r, err := session.dbMap.SelectInt(session.query)
+		if err != nil {
+			return err
+		}
+		result = &r
+	}
+
 	session.dbMap.SelectOne(result, session.query)
-	//session.logger.Debug("実行後結果オブジェクト:", fmt.Sprintf("%v", result))
 
 	//クエリを初期化.
 	session.clearQuery()
-	//session.logger.Debug("初期化後SQL文格納フィールド:", session.query)
 
 	return nil
 }
 
 // SelectList 抽出条件に一致する複数レコードを取得します.
-func (session *SQLSession) SelectList(parameter, resultList interface{}, mapper, id string) error {
+func (session *SQLSession) SelectList(parameter interface{}, resultList interface{}, mapper, id string) error {
 	//SQL文.
 	sql := ""
 
@@ -119,26 +123,21 @@ func (session *SQLSession) SelectList(parameter, resultList interface{}, mapper,
 
 	//構造体の全フィールドをマップに変換.
 	paramMap := convFieldToMap(parameter)
-	//session.logger.Debug("動的SQLパラメータ:", paramMap)
 
 	//SQLテンプレートを解析.
 	session.parseSQL(sql, paramMap)
-	//session.logger.Debug("実行SQL文:", session.query)
 
 	//SQLを取得.
-	//session.logger.Debug("実行前結果リスト:", fmt.Sprintf("%v", resultList))
 	session.dbMap.Select(resultList, session.query)
-	//session.logger.Debug("実行後結果リスト:", fmt.Sprintf("%v", resultList))
 
 	//クエリを初期化.
 	session.clearQuery()
-	//session.logger.Debug("初期化後SQL文格納フィールド:", session.query)
 
 	return nil
 }
 
 // Insert レコードの挿入を行います.
-func (session *SQLSession) Insert(parameter interface{}, mapper, id string) (int, error) {
+func (session *SQLSession) Insert(parameter interface{}, mapper string, id string) (int, error) {
 	//SQL文.
 	sql := ""
 
@@ -160,11 +159,9 @@ func (session *SQLSession) Insert(parameter interface{}, mapper, id string) (int
 
 	//構造体の全フィールドをマップに変換.
 	paramMap := convFieldToMap(parameter)
-	//session.logger.Debug("動的SQLパラメータ:", paramMap)
 
 	//SQLテンプレートを解析.
 	session.parseSQL(sql, paramMap)
-	//session.logger.Debug("実行SQL文:", session.query)
 
 	//SQLを実行.
 	result, err := session.dbMap.Db.Exec(session.query)
@@ -174,17 +171,15 @@ func (session *SQLSession) Insert(parameter interface{}, mapper, id string) (int
 
 	//レコード登録数を取得.
 	num, err := result.RowsAffected()
-	//session.logger.Debug("レコード登録数:", num)
 
 	//クエリを初期化.
 	session.clearQuery()
-	//session.logger.Debug("初期化後SQL文格納フィールド:", session.query)
 
 	return int(num), err
 }
 
 // Update レコードの更新を行います.
-func (session *SQLSession) Update(parameter interface{}, mapper, id string) (int, error) {
+func (session *SQLSession) Update(parameter interface{}, mapper string, id string) (int, error) {
 	//SQL文.
 	sql := ""
 
@@ -206,11 +201,9 @@ func (session *SQLSession) Update(parameter interface{}, mapper, id string) (int
 
 	//構造体の全フィールドをマップに変換.
 	paramMap := convFieldToMap(parameter)
-	//session.logger.Debug("動的SQLパラメータ:", paramMap)
 
 	//SQLテンプレートを解析.
 	session.parseSQL(sql, paramMap)
-	//session.logger.Debug("実行SQL文:", session.query)
 
 	//SQLを実行.
 	result, err := session.dbMap.Db.Exec(session.query)
@@ -220,17 +213,15 @@ func (session *SQLSession) Update(parameter interface{}, mapper, id string) (int
 
 	//レコード更新数を取得.
 	num, err := result.RowsAffected()
-	//session.logger.Debug("レコード更新数:", num)
 
 	//クエリを初期化.
 	session.clearQuery()
-	//session.logger.Debug("初期化後SQL文格納フィールド:", session.query)
 
 	return int(num), err
 }
 
 // Delete レコードの削除を行います.
-func (session *SQLSession) Delete(parameter interface{}, mapper, id string) (int, error) {
+func (session *SQLSession) Delete(parameter interface{}, mapper string, id string) (int, error) {
 	//SQL文.
 	sql := ""
 
@@ -252,11 +243,9 @@ func (session *SQLSession) Delete(parameter interface{}, mapper, id string) (int
 
 	//構造体の全フィールドをマップに変換.
 	paramMap := convFieldToMap(parameter)
-	//session.logger.Debug("動的SQLパラメータ:", paramMap)
 
 	//SQLテンプレートを解析.
 	session.parseSQL(sql, paramMap)
-	//session.logger.Debug("実行SQL文:", session.query)
 
 	//SQLを実行.
 	result, err := session.dbMap.Db.Exec(session.query)
@@ -266,19 +255,18 @@ func (session *SQLSession) Delete(parameter interface{}, mapper, id string) (int
 
 	//レコード削除数を取得.
 	num, err := result.RowsAffected()
-	//session.logger.Debug("レコード削除数:", num)
 
 	//クエリを初期化.
 	session.clearQuery()
-	//session.logger.Debug("初期化後SQL文格納フィールド:", session.query)
 
 	return int(num), err
 }
 
 // parseSQL SQL文を解析します.
 func (session *SQLSession) parseSQL(sql string, paramMap map[string]string) {
+	// paramMapが未設定(nil or 要素0件)の場合は空のMapで初期化.
 	if len(paramMap) == 0 {
-		return
+		paramMap = map[string]string{}
 	}
 
 	templ := template.Must(template.New("sql").Parse(sql))
@@ -300,6 +288,11 @@ func (session *SQLSession) clearQuery() {
 
 // convFieldToMap 構造体のフィールドをマップに変換します.
 func convFieldToMap(obj interface{}) map[string]string {
+	// 構造体がnilの場合は後続処理を行わずnilを返す.
+	if obj == nil {
+		return nil
+	}
+
 	//インターフェースの実態をValue型に変換(フィールドの値を格納する構造体).
 	v := reflect.ValueOf(obj).Elem()
 
@@ -317,11 +310,20 @@ func convFieldToMap(obj interface{}) map[string]string {
 		fieldName := t.Field(i).Name
 		fieldValue := v.FieldByName(fieldName).Interface()
 
+		// 値がNULL(文字列)の場合.
 		if fieldValue == "NULL" {
 			fieldMap[fieldName] = fmt.Sprintf("%v", fieldValue)
-		} else {
-			fieldMap[fieldName] = fmt.Sprintf("'%v'", fieldValue)
+			continue
 		}
+
+		// 日時型の場合.
+		val, ok := fieldValue.(time.Time)
+		if ok {
+			fieldMap[fieldName] = val.Format("'2006-01-02 15:04:05.999'")
+			continue
+		}
+
+		fieldMap[fieldName] = fmt.Sprintf("'%v'", fieldValue)
 
 	}
 
