@@ -425,12 +425,8 @@ func convFieldToMap(obj any) map[string]string {
 		// 日時型の場合.
 		val, ok := fieldValue.(time.Time)
 		if ok {
-<<<<<<< Updated upstream
-			fieldMap[fieldName] = val.Format("'2006-01-02 15:04:05.999'")
-=======
 			// TODO DBによりフォーマットを切り替える必要がある.
 			fieldMap[fieldName] = val.Format("'2006-01-02 15:04:05.000'")
->>>>>>> Stashed changes
 			continue
 		}
 
