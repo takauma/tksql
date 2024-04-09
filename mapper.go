@@ -2,9 +2,11 @@ package tksql
 
 import (
 	"encoding/xml"
+	"fmt"
 	"io"
 	"os"
 	"path"
+	"strings"
 )
 
 // mapper マッパー構造体.
@@ -31,6 +33,8 @@ func parseMapper(mapperDir, filename string) (*mapper, error) {
 	}
 	defer file.Close()
 
+	fmt.Println("[tksql] Loaded mapper file: " + strings.ReplaceAll(file.Name(), `\`, "/"))
+
 	data, err := io.ReadAll(file)
 	if err != nil {
 		return nil, err
@@ -42,6 +46,19 @@ func parseMapper(mapperDir, filename string) (*mapper, error) {
 	// XMLファイルを解析して構造体に格納.
 	if err = xml.Unmarshal(data, mapper); err != nil {
 		return nil, err
+	}
+
+	for _, query := range mapper.Insert {
+		fmt.Println("[tksql] Loaded query: " + mapper.Name + "." + query.ID)
+	}
+	for _, query := range mapper.Update {
+		fmt.Println("[tksql] Loaded query: " + mapper.Name + "." + query.ID)
+	}
+	for _, query := range mapper.Delete {
+		fmt.Println("[tksql] Loaded query: " + mapper.Name + "." + query.ID)
+	}
+	for _, query := range mapper.Select {
+		fmt.Println("[tksql] Loaded query: " + mapper.Name + "." + query.ID)
 	}
 
 	return mapper, nil
