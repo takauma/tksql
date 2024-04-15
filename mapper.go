@@ -21,7 +21,7 @@ type mapper struct {
 // query クエリ構造体.
 type query struct {
 	ID    string `xml:"id,attr"`
-	Value string `xml:",cdata"`
+	Value string `xml:",innerxml"`
 }
 
 // parseMapper XMLファイルを解析しマッパー構造体に格納します.
