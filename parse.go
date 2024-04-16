@@ -233,20 +233,3 @@ func queryOptimize(query string) string {
 	query = regexp.MustCompile(`( |\t)+`).ReplaceAllString(query, " ")
 	return strings.TrimSpace(query)
 }
-
-// isKindOrPointerKind 型もしくはポインタが参照している型の種類が一致するか判定します.
-func isKindOrPointerKind(obj any, targetKind reflect.Kind) bool {
-	kind := reflect.ValueOf(obj).Kind()
-	if kind == reflect.Pointer {
-		kind = reflect.ValueOf(obj).Elem().Kind()
-	}
-	return kind == targetKind
-}
-
-// isNil ポインタがnilであるか判定します.
-func isNil(obj any) bool {
-	if reflect.ValueOf(obj).Kind() == reflect.Pointer {
-		return obj == nil || reflect.ValueOf(obj).IsNil()
-	}
-	return false
-}

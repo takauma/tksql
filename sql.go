@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
@@ -122,44 +123,6 @@ func (s *SQLSession) SelectOne(parameter any, result any, mapper string, id stri
 	// SQLを解析.
 	s.parseSQLQuery()
 
-	// デバッグ時ログ出力関数.
-	outResultLog := func(result any) {
-		if logger.IsDebagEnable() {
-			var logResult any
-			rv := reflect.ValueOf(result)
-			if rv.IsNil() {
-				logResult = nil
-			} else {
-				for rv.Kind() == reflect.Pointer {
-					rv = rv.Elem()
-				}
-				logResult = rv.Interface()
-				rv = reflect.ValueOf(logResult)
-				if rv.Kind() == reflect.Struct {
-					if v, ok := result.(*time.Time); ok {
-						logResult = v.Format(convDateTimeFormat)
-					} else {
-						list := []any{}
-						for i := 0; i < rv.NumField(); i++ {
-							rvf := rv.Field(i)
-							fieldValue := rvf.Interface()
-							if rvf.Kind() == reflect.Pointer {
-								if rvf.IsNil() {
-									fieldValue = nil
-								} else {
-									fieldValue = rvf.Elem().Interface()
-								}
-							}
-							list = append(list, fieldValue)
-						}
-						logResult = list
-					}
-				}
-			}
-			logger.Debug("Result:", logResult)
-		}
-	}
-
 	// SQLを取得.
 	switch r := result.(type) {
 	case *int:
@@ -169,7 +132,9 @@ func (s *SQLSession) SelectOne(parameter any, result any, mapper string, id stri
 			return err
 		}
 		*r = int(i64)
-		outResultLog(r)
+		if logger.IsDebagEnable() {
+			logger.Debug("Result:", parseAnyValue(r))
+		}
 	case *time.Time:
 		rows, err := s.dbMap.Query(s.query, s.params...)
 		if err != nil {
@@ -185,13 +150,17 @@ func (s *SQLSession) SelectOne(parameter any, result any, mapper string, id stri
 			logger.Error(err)
 			return err
 		}
-		outResultLog(r)
+		if logger.IsDebagEnable() {
+			logger.Debug("Result:", parseAnyValue(r))
+		}
 	default:
 		if err := s.dbMap.SelectOne(r, s.query, s.params...); err != nil {
 			logger.Error(err)
 			return err
 		}
-		outResultLog(r)
+		if logger.IsDebagEnable() {
+			logger.Debug("Result:", parseAnyValue(r))
+		}
 	}
 
 	return nil
@@ -245,65 +214,21 @@ func (s *SQLSession) SelectList(parameter any, resultList any, mapper, id string
 
 	// デバッグ時結果ログ出力.
 	if logger.IsDebagEnable() {
-		logResults := []any{}
-		if reflect.ValueOf(resultList).IsNil() {
-			return nil
-		}
-		rvList := getInstanceReflectValue(reflect.ValueOf(resultList))
-		if rvList.Kind() == reflect.Slice {
-			// スライスのループ.
-			for i := 0; i < rvList.Len(); i++ {
-				value := rvList.Index(i)
-
-				// 取得要素がnil.
-				if value.Interface() == nil {
-					logResults = append(logResults, nil)
-					continue
-				}
-
-				// スライス要素の実体情報取得.
-				value = getInstanceReflectValue(value)
-
-				// 構造体以外.
-				if value.Kind() != reflect.Struct {
-					logResults = append(logResults, value.Interface())
-					continue
-				}
-
-				// フィールドのループ.
-				fieldValues := []any{}
-				for j := 0; j < value.NumField(); j++ {
-					rvField := value.Field(j)
-
-					// ポインタ以外.
-					if rvField.Kind() != reflect.Pointer {
-						fieldValues = append(fieldValues, rvField.Interface())
-						continue
-					}
-
-					// フィールドがnil.
-					if rvField.IsNil() {
-						fieldValues = append(fieldValues, nil)
-						continue
-					}
-
-					// フィールドの実体情報取得.
-					rvField = getInstanceReflectValue(rvField)
-
-					// フィールド値取得.
-					fieldValue := rvField.Interface()
-
-					// 日時型の場合はフォーマットをかける.
-					if v, ok := fieldValue.(time.Time); ok {
-						fieldValue = v.Format(convDateTimeFormat)
-					}
-
-					fieldValues = append(fieldValues, fieldValue)
-				}
-				logResults = append(logResults, fieldValues)
+		result := parseAnyValue(resultList)
+		rv := reflect.ValueOf(result)
+		logger.Debug("Result row count:", rv.Len())
+		switch {
+		case rv.Len() < 2:
+			logger.Debug("Results:", result)
+		default:
+			sb := strings.Builder{}
+			sb.WriteString("Results:\n")
+			for i := 0; i < rv.Len(); i++ {
+				v := rv.Index(i).Interface()
+				sb.WriteString(fmt.Sprintf("Row[%d]: %v\n", i+1, v))
 			}
+			logger.Debug(sb.String())
 		}
-		logger.Debug("Results:", logResults)
 	}
 
 	return nil
@@ -698,33 +623,7 @@ func (s *SQLSession) parseSQLQuery() {
 
 	// デバッグ時パラメータログ出力.
 	if logger.IsDebagEnable() {
-		logger.Debug("Parsed SQL: " + s.query)
-		logParams := []any{}
-		for _, v := range s.params {
-			if v == nil {
-				logParams = append(logParams, nil)
-				continue
-			}
-
-			rv := reflect.ValueOf(v)
-
-			// ポインタ以外.
-			if rv.Kind() != reflect.Pointer {
-				logParams = append(logParams, v)
-				continue
-			}
-
-			logParams = append(logParams, getInstanceReflectValue(rv).Interface())
-		}
-
-		logger.Debug("Params: ", logParams)
+		logger.Debug("Parsed SQL:", s.query)
+		logger.Debug("Params:", parseAnyValue(s.params))
 	}
-}
-
-// getInstanceReflectValue ポインタが刺す実体の情報を取得します.
-func getInstanceReflectValue(rv reflect.Value) reflect.Value {
-	for rv.Kind() == reflect.Pointer {
-		rv = rv.Elem()
-	}
-	return rv
 }
